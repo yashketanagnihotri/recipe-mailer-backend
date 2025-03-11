@@ -1,0 +1,20 @@
+{
+    "title": "Chocolate Cake",
+    "description": "A rich and moist chocolate cake with creamy frosting.",
+    "ingredients": [
+        "2 cups flour",
+        "1 cup cocoa powder",
+        "1.5 cups sugar",
+        "2 eggs",
+        "1 cup milk",
+        "1/2 cup butter"
+    ],
+    "instructions": [
+        "Preheat oven to 350°F (175°C).",
+        "Mix dry ingredients together.",
+        "Add eggs, milk, and butter and stir well.",
+        "Pour into a greased cake pan.",
+        "Bake for 30-35 minutes.",
+        "Let cool before frosting."
+    ]
+}
