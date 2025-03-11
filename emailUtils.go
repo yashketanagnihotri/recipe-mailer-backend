@@ -13,12 +13,8 @@ import (
 	"gopkg.in/gomail.v2"
 )
 
-// The json tags here are mainly for marshalling and unmarshalling
 type EmailRequest struct {
 	Receivers []string `json:"receivers"`
-	Breakfast bool `json:"breakfast"`
-	Lunch bool `json:"lunch"`
-	Dinner bool `json:"dinner"`
 }
 
 // Picks a random recipe from Firestore
