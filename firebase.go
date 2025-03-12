@@ -6,45 +6,45 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"os"
 
 	"cloud.google.com/go/firestore"
+	"github.com/joho/godotenv"
 	"google.golang.org/api/option"
 )
 
-
-
 type Recipe struct {
-	Title       string   `json:"title"`
-	Description string   `json:"description"`
-	Ingredients []string `json:"ingredients"`
+	Title        string   `json:"title"`
+	Description  string   `json:"description"`
+	Ingredients  []string `json:"ingredients"`
 	Instructions []string `json:"instructions"`
 }
+
 // Firestore client
 var firestoreClient *firestore.Client
 
-// Initialize Firebase Firestore
+// Initialize Firestore with credentials from environment variable
 func initFirebase() {
-	ctx := context.Background()
-	sa := option.WithCredentialsFile("serviceAccountKey.json")
+	// Load .env file (for local development)
+	_ = godotenv.Load()
 
-	client, err := firestore.NewClient(ctx, "recipes-app-e2ba2", sa)
+	// Get Firebase credentials from environment variable
+	creds := os.Getenv("FIREBASE_CREDENTIALS")
+	if creds == "" {
+		log.Fatal("FIREBASE_CREDENTIALS not set in environment")
+	}
+
+	ctx := context.Background()
+	credBytes := []byte(creds)
+	opt := option.WithCredentialsJSON(credBytes)
+
+	client, err := firestore.NewClient(ctx, "recipes-app-e2ba2", opt)
 	if err != nil {
 		log.Fatalf("Failed to initialize Firestore: %v", err)
 	}
 
 	firestoreClient = client
 	fmt.Println("Connected to Firestore")
-}
-
-// Firestore client initialization
-func initFirestore() (*firestore.Client, error) {
-	ctx := context.Background()
-	sa := option.WithCredentialsFile("serviceAccountKey.json") // Update this with your actual credentials file
-	client, err := firestore.NewClient(ctx, "recipes-app-e2ba2", sa)
-	if err != nil {
-		return nil, err
-	}
-	return client, nil
 }
 
 // Handler to add multiple recipes to Firestore
@@ -60,24 +60,16 @@ func addRecipesHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	client, err := initFirestore()
-	if err != nil {
-		http.Error(w, "Failed to initialize Firestore", http.StatusInternalServerError)
-		log.Println("Firestore initialization error:", err)
-		return
-	}
-	defer client.Close()
-
 	ctx := context.Background()
-	batch := client.Batch()
-	collectionRef := client.Collection("recipes")
+	batch := firestoreClient.Batch()
+	collectionRef := firestoreClient.Collection("recipes")
 
 	for _, recipe := range recipes {
-		// Ensure that each recipe is unique and not a reference to the same object
+		// Ensure that each recipe is unique
 		newRecipe := Recipe{
 			Title:        recipe.Title,
 			Description:  recipe.Description,
-			Ingredients:  append([]string{}, recipe.Ingredients...), // Copy slice to avoid reference issues
+			Ingredients:  append([]string{}, recipe.Ingredients...), // Copy slices
 			Instructions: append([]string{}, recipe.Instructions...),
 		}
 
@@ -85,7 +77,7 @@ func addRecipesHandler(w http.ResponseWriter, r *http.Request) {
 		batch.Set(docRef, newRecipe)
 	}
 
-	_, err = batch.Commit(ctx)
+	_, err := batch.Commit(ctx)
 	if err != nil {
 		http.Error(w, "Failed to add recipes", http.StatusInternalServerError)
 		log.Println("Firestore batch commit error:", err)
@@ -95,7 +87,6 @@ func addRecipesHandler(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte("Recipes added successfully!"))
 }
-
 
 // Fetch recipes from Firestore
 func getRecipesFromFirestore() ([]Recipe, error) {
@@ -122,3 +113,4 @@ func getRecipesFromFirestore() ([]Recipe, error) {
 
 	return recipes, nil
 }
+
