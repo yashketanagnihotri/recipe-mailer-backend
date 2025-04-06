@@ -9,10 +9,16 @@ import (
 func main() {
 	initFirebase()
 
-	// Wrap handlers with CORS middleware
+	// Email
 	http.HandleFunc("/send-email", withCORS(sendEmailHandler))
-	http.HandleFunc("/add-recipe", withCORS(addRecipesHandler))
 	http.HandleFunc("/send-single-email", withCORS(sendSingleEmailHandler)) 
+
+	// Recipes
+	http.HandleFunc("/add-recipe", withCORS(addRecipesHandler))
+	http.HandleFunc("/get-all-recipes", withCORS(getAllRecipesHandler))
+	http.HandleFunc("/generate-recipes", withCORS(generateRecipesHandler))
+
+
 
 	fmt.Println("Server running on :8080")
 	log.Fatal(http.ListenAndServe(":8080", nil))
