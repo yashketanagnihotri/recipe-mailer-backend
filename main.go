@@ -12,6 +12,7 @@ func main() {
 	// Wrap handlers with CORS middleware
 	http.HandleFunc("/send-email", withCORS(sendEmailHandler))
 	http.HandleFunc("/add-recipe", withCORS(addRecipesHandler))
+	http.HandleFunc("/send-single-email", withCORS(sendSingleEmailHandler)) 
 
 	fmt.Println("Server running on :8080")
 	log.Fatal(http.ListenAndServe(":8080", nil))

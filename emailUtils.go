@@ -188,3 +188,39 @@ func sendEmailHandler(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte("Emails sent successfully!"))
 }
+
+func sendSingleEmailHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Invalid request method", http.StatusMethodNotAllowed)
+		return
+	}
+
+	var req struct {
+		Email string `json:"email"`
+	}
+
+	err := json.NewDecoder(r.Body).Decode(&req)
+	if err != nil || req.Email == "" {
+		http.Error(w, "Invalid email input", http.StatusBadRequest)
+		return
+	}
+
+	// Get a random recipe
+	recipe, err := getRandomRecipe()
+	if err != nil {
+		http.Error(w, "Failed to fetch recipe", http.StatusInternalServerError)
+		return
+	}
+
+	// Generate email body
+	body := generateEmailBody(recipe)
+
+	// Send to single email
+	if err := sendEmail([]string{req.Email}, body); err != nil {
+		http.Error(w, "Failed to send email", http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte("Recipe sent to " + req.Email))
+}
