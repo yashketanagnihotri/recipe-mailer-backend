@@ -47,12 +47,14 @@ func generateRecipesHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Prepare OpenAI API request
 	payload := map[string]interface{}{
-		"model": "gpt-3.5-turbo",
+		"model": "gpt-4o-mini",
 		"messages": []map[string]string{
 			{"role": "user", "content": prompt},
 		},
 		"temperature": 0.7,
 	}
+	
+	
 	payloadBytes, _ := json.Marshal(payload)
 
 	reqBody := bytes.NewBuffer(payloadBytes)
