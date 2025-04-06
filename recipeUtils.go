@@ -3,9 +3,11 @@ package main
 import (
 	"bytes"
 	"encoding/json"
-	"io/ioutil"
+	"io"
+	"log"
 	"net/http"
 	"os"
+	"regexp"
 	"strings"
 )
 
@@ -13,13 +15,14 @@ type IngredientsRequest struct {
 	Ingredients []string `json:"ingredients"`
 }
 
+
 func generateRecipesHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "Invalid request method", http.StatusMethodNotAllowed)
 		return
 	}
 
-	// Decode the input ingredients
+	// Decode input ingredients
 	var req IngredientsRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, "Invalid JSON body", http.StatusBadRequest)
@@ -57,7 +60,6 @@ func generateRecipesHandler(w http.ResponseWriter, r *http.Request) {
 	openaiReq.Header.Set("Authorization", "Bearer "+apiKey)
 	openaiReq.Header.Set("Content-Type", "application/json")
 
-	// Make the request
 	resp, err := http.DefaultClient.Do(openaiReq)
 	if err != nil {
 		http.Error(w, "Failed to call OpenAI API", http.StatusInternalServerError)
@@ -65,8 +67,14 @@ func generateRecipesHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	defer resp.Body.Close()
 
-	// Parse OpenAI response
-	body, _ := ioutil.ReadAll(resp.Body)
+	if resp.StatusCode != http.StatusOK {
+		bodyBytes, _ := io.ReadAll(resp.Body)
+		log.Printf("OpenAI API error %d: %s", resp.StatusCode, string(bodyBytes))
+		http.Error(w, "OpenAI API returned an error", http.StatusInternalServerError)
+		return
+	}
+
+	body, _ := io.ReadAll(resp.Body)
 	var aiResp struct {
 		Choices []struct {
 			Message struct {
@@ -75,25 +83,37 @@ func generateRecipesHandler(w http.ResponseWriter, r *http.Request) {
 		} `json:"choices"`
 	}
 	if err := json.Unmarshal(body, &aiResp); err != nil || len(aiResp.Choices) == 0 {
+		log.Printf("Failed to parse OpenAI response: %v\nBody: %s", err, string(body))
 		http.Error(w, "Failed to parse OpenAI response", http.StatusInternalServerError)
 		return
 	}
 
-	// Extract JSON from the message content
-	var recipes []Recipe
-	decoded := aiResp.Choices[0].Message.Content
-	decoder := json.NewDecoder(strings.NewReader(decoded))
-	decoder.DisallowUnknownFields()
+	// Extract and clean the JSON content
+	decoded := extractJSON(aiResp.Choices[0].Message.Content)
 
-	if err := decoder.Decode(&recipes); err != nil {
+	// Unmarshal into recipe struct
+	var recipes []Recipe
+	if err := json.Unmarshal([]byte(decoded), &recipes); err != nil {
+		log.Printf("Failed to decode recipes: %v\nContent: %s", err, decoded)
 		http.Error(w, "Failed to decode recipes. Check OpenAI output format.", http.StatusInternalServerError)
 		return
 	}
 
-	// Send response
+	// Send final response
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(recipes)
 }
+
+// Regex cleaner to extract JSON inside triple backticks or fallback
+func extractJSON(raw string) string {
+	re := regexp.MustCompile("(?s)```(?:json)?(.*?)```")
+	matches := re.FindStringSubmatch(raw)
+	if len(matches) >= 2 {
+		return strings.TrimSpace(matches[1])
+	}
+	return strings.TrimSpace(raw)
+}
+
 
 
 // get a list of all recipes from Firestore
