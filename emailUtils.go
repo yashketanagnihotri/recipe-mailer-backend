@@ -17,6 +17,43 @@ type EmailRequest struct {
 	Receivers []string `json:"receivers"`
 }
 
+type MealPreference struct {
+	Email     string `json:"email"`
+	Breakfast bool   `json:"breakfast"`
+	Lunch     bool   `json:"lunch"`
+	Dinner    bool   `json:"dinner"`
+}
+
+func registerMealPreferenceHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Invalid request method", http.StatusMethodNotAllowed)
+		return
+	}
+
+	var pref MealPreference
+	if err := json.NewDecoder(r.Body).Decode(&pref); err != nil || pref.Email == "" {
+		http.Error(w, "Invalid input data", http.StatusBadRequest)
+		return
+	}
+
+	ctx := context.Background()
+	_, err := firestoreClient.Collection("meal_preferences").Doc(pref.Email).Set(ctx, map[string]interface{}{
+		"email":     pref.Email,
+		"breakfast": pref.Breakfast,
+		"lunch":     pref.Lunch,
+		"dinner":    pref.Dinner,
+	})
+	if err != nil {
+		log.Println("Failed to store meal preference:", err)
+		http.Error(w, "Failed to store data", http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte("Meal preferences registered for: " + pref.Email))
+}
+
+
 // Picks a random recipe from Firestore
 func getRandomRecipe() (Recipe, error) {
 	recipes, err := getRecipesFromFirestore()
@@ -223,4 +260,78 @@ func sendSingleEmailHandler(w http.ResponseWriter, r *http.Request) {
 
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte("Recipe sent to " + req.Email))
+}
+
+func checkPreferencesAndSend(meal string) {
+	ctx := context.Background()
+	iter := firestoreClient.Collection("meal_preferences").Documents(ctx)
+
+	for {
+		doc, err := iter.Next()
+		if err == iterator.Done {
+			break
+		}
+		if err != nil {
+			log.Println("Error reading meal preferences:", err)
+			break
+		}
+
+		data := doc.Data()
+		email := data["email"].(string)
+		shouldSend := data[meal].(bool)
+
+		if shouldSend {
+			recipe, err := getRandomRecipe()
+			if err != nil {
+				log.Println("Failed to get recipe for", email, ":", err)
+				continue
+			}
+			body := generateEmailBody(recipe)
+			sendEmail([]string{email}, body)
+		}
+	}
+}
+
+
+
+// These are related to the scheduling of daily tasks
+func scheduleDailyTasks() {
+	go scheduleTask("breakfast", "07:30")
+	go scheduleTask("lunch", "12:30")
+	go scheduleTask("dinner", "18:30")
+}
+
+func scheduleTask(meal string, targetTime string) {
+	for {
+		next := nextOccurrenceIST(targetTime)
+		duration := time.Until(next)
+		log.Printf("Next %s task scheduled at: %v (in %v)", meal, next, duration)
+
+		time.Sleep(duration)
+
+		checkPreferencesAndSend(meal)
+
+		// Wait 1 minute to prevent back-to-back triggering in edge cases
+		time.Sleep(time.Minute)
+	}
+}
+
+
+func nextOccurrenceIST(timeStr string) time.Time {
+	// Parse desired hour and minute (e.g. "07:30")
+	targetHourMin, _ := time.Parse("15:04", timeStr)
+
+	// Get IST location
+	istLoc, _ := time.LoadLocation("Asia/Kolkata")
+
+	now := time.Now().In(istLoc)
+
+	// Create the next occurrence time
+	next := time.Date(now.Year(), now.Month(), now.Day(), targetHourMin.Hour(), targetHourMin.Minute(), 0, 0, istLoc)
+
+	// If it's already past the time today, schedule for tomorrow
+	if now.After(next) {
+		next = next.Add(24 * time.Hour)
+	}
+	return next
 }

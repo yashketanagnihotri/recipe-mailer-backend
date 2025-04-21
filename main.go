@@ -12,13 +12,15 @@ func main() {
 	// Email
 	http.HandleFunc("/send-email", withCORS(sendEmailHandler))
 	http.HandleFunc("/send-single-email", withCORS(sendSingleEmailHandler)) 
+	http.HandleFunc("/register-meal-preference", withCORS(registerMealPreferenceHandler))
+
 
 	// Recipes
 	http.HandleFunc("/add-recipe", withCORS(addRecipesHandler))
 	http.HandleFunc("/get-all-recipes", withCORS(getAllRecipesHandler))
 	http.HandleFunc("/generate-recipes", withCORS(generateRecipesHandler))
 
-
+	go scheduleDailyTasks()
 
 	fmt.Println("Server running on :8080")
 	log.Fatal(http.ListenAndServe(":8080", nil))
