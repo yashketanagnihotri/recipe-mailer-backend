@@ -49,26 +49,24 @@ func withCORS(handler http.HandlerFunc) http.HandlerFunc {
 
 // Start Cron Jobs
 func startCronJobs() {
-	loc, err := time.LoadLocation("Asia/Kolkata")
-	if err != nil {
-		log.Fatalf("Failed to load location: %v", err)
-	}
+	// Manually set IST (UTC+5:30)
+	ist := time.FixedZone("IST", 5*60*60+30*60)
 
-	c := cron.New(cron.WithLocation(loc))
+	c := cron.New(cron.WithLocation(ist))
 
-	// Schedule for 7:30 AM IST
+	// 7:30 AM IST
 	c.AddFunc("30 7 * * *", func() {
 		log.Println("Cron: Sending Breakfast Recipes")
 		checkPreferencesAndSend("breakfast")
 	})
 
-	// Schedule for 12:30 PM IST
+	// 12:30 PM IST
 	c.AddFunc("30 12 * * *", func() {
 		log.Println("Cron: Sending Lunch Recipes")
 		checkPreferencesAndSend("lunch")
 	})
 
-	// Schedule for 6:30 PM IST
+	// 6:30 PM IST
 	c.AddFunc("30 18 * * *", func() {
 		log.Println("Cron: Sending Dinner Recipes")
 		checkPreferencesAndSend("dinner")
