@@ -116,37 +116,84 @@ func generateEmailBody(recipe Recipe) string {
 		<head>
 			<meta charset="UTF-8">
 			<meta name="viewport" content="width=device-width, initial-scale=1.0">
-			<title>Delicious Recipe</title>
-			<link href="https://fonts.googleapis.com/css2?family=Pacifico&family=Roboto:wght@300;400;700&display=swap" rel="stylesheet">
+			<title>%s - Recipe</title>
 			<style>
-				body { margin: 0; font-family: 'Roboto', sans-serif; background: linear-gradient(to right, #ff758c, #ff7eb3); color: #fff; text-align: center; padding: 20px; }
-				.container { background: rgba(255, 255, 255, 0.15); padding: 20px; border-radius: 15px; box-shadow: 0px 10px 25px rgba(0, 0, 0, 0.2); max-width: 600px; margin: auto; animation: fadeIn 1s ease-in-out; }
-				h1 { font-family: 'Pacifico', cursive; font-size: 28px; color: #ffe600; text-shadow: 2px 2px 5px rgba(0, 0, 0, 0.2); }
-				p { font-size: 16px; line-height: 1.6; }
-				ul, ol { text-align: left; display: inline-block; background: rgba(255, 255, 255, 0.2); padding: 15px; border-radius: 10px; width: 80%%; animation: slideUp 1s ease-in-out; }
-				li { margin-bottom: 5px; }
-				.footer { margin-top: 20px; font-size: 12px; opacity: 0.8; }
-				@keyframes fadeIn { from { opacity: 0; transform: scale(0.9); } to { opacity: 1; transform: scale(1); } }
-				@keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
-				.emoji { font-size: 50px; animation: bounce 1.5s infinite; }
-				@keyframes bounce { 0%%, 100%% { transform: translateY(0); } 50%% { transform: translateY(-10px); } }
+				body {
+					margin: 0;
+					padding: 0;
+					font-family: 'Segoe UI', 'Helvetica Neue', sans-serif;
+					background-color: #F4F8D3;
+					color: #333;
+				}
+				.container {
+					background-color: #ffffff;
+					margin: 40px auto;
+					padding: 30px 40px;
+					max-width: 700px;
+					border-radius: 20px;
+					box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+				}
+				h1 {
+					color: #8E7DBE;
+					font-size: 32px;
+					margin-bottom: 10px;
+				}
+				p.description {
+					font-size: 18px;
+					color: #555;
+					margin-bottom: 30px;
+				}
+				h3 {
+					color: #8E7DBE;
+					margin-top: 30px;
+					font-size: 22px;
+				}
+				ul, ol {
+					background: #F7CFD8;
+					padding: 20px;
+					border-radius: 12px;
+					margin: 10px 0 20px 0;
+				}
+				li {
+					margin-bottom: 10px;
+					font-size: 16px;
+				}
+				.footer {
+					text-align: center;
+					margin-top: 40px;
+					font-size: 14px;
+					color: #888;
+				}
+				.emoji {
+					font-size: 48px;
+					text-align: center;
+					margin-bottom: 20px;
+				}
+				@media (min-width: 768px) {
+					.container {
+						padding: 50px 60px;
+					}
+				}
 			</style>
 		</head>
 		<body>
 			<div class="container">
-				<div class="emoji">🍽️</div>
+				<div class="emoji">👩‍🍳</div>
 				<h1>%s</h1>
-				<p><strong>%s</strong></p>
+				<p class="description">%s</p>
 				<h3>🥕 Ingredients</h3>
 				<ul>%s</ul>
 				<h3>🔥 Instructions</h3>
 				<ol>%s</ol>
+				<div class="footer">
+					Bon Appétit! 🎉 | Crafted with love from Successful Nature ❤️
+				</div>
 			</div>
-			<p class="footer">Bon Appétit! 🎉 | Stay Hungry, Stay Happy!</p>
 		</body>
 		</html>
-	`, recipe.Title, recipe.Description, formatList(recipe.Ingredients), formatList(recipe.Instructions))
+	`, recipe.Title, recipe.Title, recipe.Description, formatList(recipe.Ingredients), formatList(recipe.Instructions))
 }
+
 
 // Formats a list into HTML list items
 func formatList(items []string) string {
