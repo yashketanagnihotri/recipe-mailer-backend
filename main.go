@@ -4,23 +4,26 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"time"
+
+	"github.com/robfig/cron/v3"
 )
 
 func main() {
 	initFirebase()
 
-	// Email
+	// Start the cron job in a separate goroutine
+	go startCronJobs()
+
+	// Email routes
 	http.HandleFunc("/send-email", withCORS(sendEmailHandler))
-	http.HandleFunc("/send-single-email", withCORS(sendSingleEmailHandler)) 
+	http.HandleFunc("/send-single-email", withCORS(sendSingleEmailHandler))
 	http.HandleFunc("/register-meal-preference", withCORS(registerMealPreferenceHandler))
 
-
-	// Recipes
+	// Recipes routes
 	http.HandleFunc("/add-recipe", withCORS(addRecipesHandler))
 	http.HandleFunc("/get-all-recipes", withCORS(getAllRecipesHandler))
 	http.HandleFunc("/generate-recipes", withCORS(generateRecipesHandler))
-
-	go scheduleDailyTasks()
 
 	fmt.Println("Server running on :8080")
 	log.Fatal(http.ListenAndServe(":8080", nil))
@@ -42,4 +45,35 @@ func withCORS(handler http.HandlerFunc) http.HandlerFunc {
 
 		handler(w, r)
 	}
+}
+
+// Start Cron Jobs
+func startCronJobs() {
+	loc, err := time.LoadLocation("Asia/Kolkata")
+	if err != nil {
+		log.Fatalf("Failed to load location: %v", err)
+	}
+
+	c := cron.New(cron.WithLocation(loc))
+
+	// Schedule for 7:30 AM IST
+	c.AddFunc("30 7 * * *", func() {
+		log.Println("Cron: Sending Breakfast Recipes")
+		checkPreferencesAndSend("breakfast")
+	})
+
+	// Schedule for 12:30 PM IST
+	c.AddFunc("30 12 * * *", func() {
+		log.Println("Cron: Sending Lunch Recipes")
+		checkPreferencesAndSend("lunch")
+	})
+
+	// Schedule for 6:30 PM IST
+	c.AddFunc("30 18 * * *", func() {
+		log.Println("Cron: Sending Dinner Recipes")
+		checkPreferencesAndSend("dinner")
+	})
+
+	c.Start()
+	log.Println("Cron jobs scheduled.")
 }

@@ -262,6 +262,8 @@ func sendSingleEmailHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func checkPreferencesAndSend(meal string) {
+
+	log.Println("Checking meal preferences for:", meal)
 	ctx := context.Background()
 	iter := firestoreClient.Collection("meal_preferences").Documents(ctx)
 
@@ -291,61 +293,10 @@ func checkPreferencesAndSend(meal string) {
 	}
 }
 
-// These are related to the scheduling of daily tasks
-func scheduleDailyTasks() {
-	go scheduleTask("breakfast", "07:30")
-	go scheduleTask("lunch", "12:30")
-	go scheduleTask("dinner", "18:30")
-}
-
-func scheduleTask(meal string, targetTime string) {
-	for {
-		next, _ := nextOccurrenceIST(targetTime)
-		duration := time.Until(next)
-		log.Printf("Next %s task scheduled at: %v (in %v)", meal, next, duration)
-
-		time.Sleep(duration)
-
-		checkPreferencesAndSend(meal)
-
-		// Wait 1 minute to prevent back-to-back triggering in edge cases
-		time.Sleep(time.Minute)
-	}
-}
+// These are related to the scheduling of daily task
 
 
-func nextOccurrenceIST(timeStr string) (time.Time, error) {
-	// Parse the time string (e.g., "07:30")
-	parsedTime, err := time.Parse("15:04", timeStr)
-	if err != nil {
-		return time.Time{}, err
-	}
 
-	// Load IST location
-	ist, err := time.LoadLocation("Asia/Kolkata")
-	if err != nil {
-		return time.Time{}, err
-	}
 
-	// Get current time in IST
-	now := time.Now().In(ist)
 
-	// Create next occurrence time
-	next := time.Date(
-		now.Year(),
-		now.Month(),
-		now.Day(),
-		parsedTime.Hour(),
-		parsedTime.Minute(),
-		0, 0,
-		ist,
-	)
-
-	// If the scheduled time has already passed today, move to tomorrow
-	if !next.After(now) {
-		next = next.Add(24 * time.Hour)
-	}
-
-	return next, nil
-}
 
