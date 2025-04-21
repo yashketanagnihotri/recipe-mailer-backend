@@ -25,7 +25,7 @@ type MealPreference struct {
 }
 
 func registerMealPreferenceHandler(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
+	if r.Method != http.MethodPut {
 		http.Error(w, "Invalid request method", http.StatusMethodNotAllowed)
 		return
 	}
@@ -50,8 +50,9 @@ func registerMealPreferenceHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.WriteHeader(http.StatusOK)
-	w.Write([]byte("Meal preferences registered for: " + pref.Email))
+	w.Write([]byte("Meal preferences updated for: " + pref.Email))
 }
+
 
 // Picks a random recipe from Firestore
 func getRandomRecipe() (Recipe, error) {
