@@ -313,32 +313,39 @@ func scheduleTask(meal string, targetTime string) {
 	}
 }
 
+
 func nextOccurrenceIST(timeStr string) (time.Time, error) {
-	// Parse desired hour and minute (e.g. "07:30") in UTC just for extracting hour/min
-	targetHourMin, err := time.Parse("15:04", timeStr)
+	// Parse the time string (e.g., "07:30")
+	parsedTime, err := time.Parse("15:04", timeStr)
 	if err != nil {
-		return time.Time{}, fmt.Errorf("invalid time format: %w", err)
+		return time.Time{}, err
 	}
 
-	// Get IST location
-	istLoc, err := time.LoadLocation("Asia/Kolkata")
+	// Load IST location
+	ist, err := time.LoadLocation("Asia/Kolkata")
 	if err != nil {
-		return time.Time{}, fmt.Errorf("failed to load IST location: %w", err)
+		return time.Time{}, err
 	}
 
-	now := time.Now().In(istLoc)
+	// Get current time in IST
+	now := time.Now().In(ist)
 
-	// Create today's target time in IST
+	// Create next occurrence time
 	next := time.Date(
-		now.Year(), now.Month(), now.Day(),
-		targetHourMin.Hour(), targetHourMin.Minute(), 0, 0,
-		istLoc,
+		now.Year(),
+		now.Month(),
+		now.Day(),
+		parsedTime.Hour(),
+		parsedTime.Minute(),
+		0, 0,
+		ist,
 	)
 
-	// If it's already past that time today, schedule for tomorrow
+	// If the scheduled time has already passed today, move to tomorrow
 	if !next.After(now) {
 		next = next.Add(24 * time.Hour)
 	}
 
 	return next, nil
 }
+
