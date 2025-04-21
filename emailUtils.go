@@ -53,7 +53,6 @@ func registerMealPreferenceHandler(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte("Meal preferences registered for: " + pref.Email))
 }
 
-
 // Picks a random recipe from Firestore
 func getRandomRecipe() (Recipe, error) {
 	recipes, err := getRecipesFromFirestore()
@@ -292,8 +291,6 @@ func checkPreferencesAndSend(meal string) {
 	}
 }
 
-
-
 // These are related to the scheduling of daily tasks
 func scheduleDailyTasks() {
 	go scheduleTask("breakfast", "07:30")
@@ -303,7 +300,7 @@ func scheduleDailyTasks() {
 
 func scheduleTask(meal string, targetTime string) {
 	for {
-		next := nextOccurrenceIST(targetTime)
+		next, _ := nextOccurrenceIST(targetTime)
 		duration := time.Until(next)
 		log.Printf("Next %s task scheduled at: %v (in %v)", meal, next, duration)
 
@@ -316,22 +313,32 @@ func scheduleTask(meal string, targetTime string) {
 	}
 }
 
-
-func nextOccurrenceIST(timeStr string) time.Time {
-	// Parse desired hour and minute (e.g. "07:30")
-	targetHourMin, _ := time.Parse("15:04", timeStr)
+func nextOccurrenceIST(timeStr string) (time.Time, error) {
+	// Parse desired hour and minute (e.g. "07:30") in UTC just for extracting hour/min
+	targetHourMin, err := time.Parse("15:04", timeStr)
+	if err != nil {
+		return time.Time{}, fmt.Errorf("invalid time format: %w", err)
+	}
 
 	// Get IST location
-	istLoc, _ := time.LoadLocation("Asia/Kolkata")
+	istLoc, err := time.LoadLocation("Asia/Kolkata")
+	if err != nil {
+		return time.Time{}, fmt.Errorf("failed to load IST location: %w", err)
+	}
 
 	now := time.Now().In(istLoc)
 
-	// Create the next occurrence time
-	next := time.Date(now.Year(), now.Month(), now.Day(), targetHourMin.Hour(), targetHourMin.Minute(), 0, 0, istLoc)
+	// Create today's target time in IST
+	next := time.Date(
+		now.Year(), now.Month(), now.Day(),
+		targetHourMin.Hour(), targetHourMin.Minute(), 0, 0,
+		istLoc,
+	)
 
-	// If it's already past the time today, schedule for tomorrow
-	if now.After(next) {
+	// If it's already past that time today, schedule for tomorrow
+	if !next.After(now) {
 		next = next.Add(24 * time.Hour)
 	}
-	return next
+
+	return next, nil
 }
